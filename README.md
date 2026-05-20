@@ -88,10 +88,6 @@ Make sure you have [Node.js](https://nodejs.org/) installed (version 18 or above
 
 ## ✉️ Contact & Connect
 
-Feel free to reach out for collaborations or inquiries:
-
-- **Email**: [ravishpaulkr@gmail.com](mailto:ravishpaulkr@gmail.com)
-- **Phone**: [+91 62009 64060](tel:+916200964060)
 - **GitHub**: [Ravish-Paul](https://github.com/Ravish-Paul)
 - **LinkedIn**: [Ravish Paul](https://www.linkedin.com/in/ravish-paul/)
 - **X / Twitter**: [@PaulkrScratch](https://x.com/PaulkrScratch)
