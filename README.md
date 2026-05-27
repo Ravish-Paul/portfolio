@@ -1,6 +1,6 @@
-# 🎭 Interactive 3D AI/LLM Portfolio
+# 🎭 Premium Interactive 3D AI/LLM Portfolio & CMS
 
-A premium, interactive developer portfolio showcasing AI and LLM engineering expertise. It features a physics-simulated **3D interactive lanyard badge** and a mouse-reactive **dot-grid shockwave background**.
+A high-performance, visually stunning developer portfolio showcasing AI and LLM engineering expertise. Features a realistic **physics-simulated 3D interactive lanyard badge**, a mouse-reactive **dot-grid shockwave background**, and a **Supabase-backed Admin CMS Panel** for live content management.
 
 <div align="center">
 
@@ -13,23 +13,33 @@ A premium, interactive developer portfolio showcasing AI and LLM engineering exp
 
 ## ✨ Features
 
-- **Interactive 3D Lanyard**: A fully interactive 3D ID badge with realistic physics (drag, throw, rotate) powered by **React Three Fiber** and **React Three Rapier**.
+### 🌟 3D Physics Lanyard Badge
+- Fully interactive 3D ID badge with realistic physics (drag, throw, rotate, swing) powered by **React Three Fiber** and **React Three Rapier**.
 - **Dynamic 2D Canvas Texturing**: The face of the ID badge is rendered onto a dynamic 2D canvas in real-time, pulling in live profile info, email, GitHub handles, and phone details before mapping onto the 3D model.
-- **Interactive Dot Grid Background**: A performance-optimized HTML5 canvas grid where dots react to mouse movement and clicks (producing a shockwave push and elastic return using **GSAP**).
-- **Responsive Layout**: Designed with a clean, minimal typography system that scales beautifully across mobile, tablet, and desktop screens.
-- **Snappy Native Scroll**: Instant smooth scroll transitions when clicking call-to-action buttons.
+
+### 🎨 Mouse-Reactive Dot Grid Background
+- Performance-optimized HTML5 canvas grid where dots react to mouse movement and clicks (producing a shockwave push and elastic return using **GSAP**).
+
+### 🛠️ Global Content Management System (CMS) & Admin Panel
+- **Real-Time Database Sync**: Connected to **Supabase** backend to globally store, fetch, and update projects, skills, experience highlights, and contact information.
+- **Admin Panel Control**: Accessible by appending `#admin` to the URL. Securely authenticate with a custom PIN.
+- **Project Pinning**: Pin specific projects to keep them prioritized at the top of your portfolio layout.
+- **Comma-Separated Slideshow Carousel**: Add multiple comma-separated image URLs to projects to display them in a dynamic slider.
+- **Rich Media & Video Autoplay**: Supports direct MP4 video URLs as well as embeddable links (YouTube, Vimeo, Loom) for projects.
+- **Database Tools**: Auto-seeding of original default data on first-load, with a manual "Reset Database" option in the admin panel.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [React 18](https://react.dev/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **3D Graphics**: [Three.js](https://threejs.org/) via [@react-three/fiber](https://github.com/pmndrs/react-three-fiber) & [@react-three/drei](https://github.com/pmndrs/drei)
-- **Physics Engine**: [@react-three/rapier](https://github.com/pmndrs/react-three-rapier)
-- **Animations**: [GSAP (GreenSock)](https://greensock.com/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+| Category | Technology |
+| :--- | :--- |
+| **Frontend Framework** | React 18, TypeScript |
+| **3D Engine & Physics** | Three.js, React Three Fiber, React Three Rapier |
+| **Animations** | GSAP (GreenSock) |
+| **Database & Auth** | Supabase |
+| **Styling** | Tailwind CSS |
+| **Build Tools** | Vite, Rollup, PostCSS |
 
 ---
 
@@ -58,11 +68,88 @@ Make sure you have [Node.js](https://nodejs.org/) installed (version 18 or above
    ```bash
    npm run dev
    ```
+   *Note: In local development, if Supabase is not configured, the website will automatically fall back to static fallback data and localStorage cache.*
 
 4. **Build for production**:
    ```bash
    npm run build
    ```
+
+---
+
+## 💾 Supabase CMS Configuration (SQL Schema)
+
+To enable global updates via the Admin Panel, follow these steps to set up Supabase:
+
+1. Create a project on the **[Supabase Dashboard](https://supabase.com/)**.
+2. Go to the **SQL Editor** tab and run the following schema definition to create the required tables and Row Level Security (RLS) policies:
+
+```sql
+-- 1. Projects table
+create table public.projects (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text not null,
+  tech text[] not null default '{}',
+  github text not null default '',
+  live text not null default '',
+  images text[] not null default '{}',
+  video text default '',
+  pinned boolean not null default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.projects enable row level security;
+create policy "Allow public read access" on public.projects for select using (true);
+create policy "Allow authenticated all access" on public.projects for all using (true) with check (true);
+
+-- 2. Skills table
+create table public.skills (
+  id uuid default gen_random_uuid() primary key,
+  name text not null unique,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.skills enable row level security;
+create policy "Allow public read access" on public.skills for select using (true);
+create policy "Allow authenticated all access" on public.skills for all using (true) with check (true);
+
+-- 3. Highlights table
+create table public.highlights (
+  id uuid default gen_random_uuid() primary key,
+  name text not null unique,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.highlights enable row level security;
+create policy "Allow public read access" on public.highlights for select using (true);
+create policy "Allow authenticated all access" on public.highlights for all using (true) with check (true);
+
+-- 4. Contact table
+create table public.contact (
+  id integer primary key default 1,
+  email text not null default '',
+  github text not null default '',
+  linkedin text not null default '',
+  twitter text not null default '',
+  phone text not null default '',
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint one_row check (id = 1)
+);
+
+alter table public.contact enable row level security;
+create policy "Allow public read access" on public.contact for select using (true);
+create policy "Allow authenticated all access" on public.contact for all using (true) with check (true);
+```
+
+### Environment Variables
+
+Add the following environment variables to your deployment settings (e.g. on **Vercel Settings -> Environment Variables** or in a local `.env` file for testing):
+
+```env
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key
+```
 
 ---
 
@@ -73,14 +160,17 @@ Make sure you have [Node.js](https://nodejs.org/) installed (version 18 or above
 │   ├── assets/              # Static assets (images, 3D glb models)
 │   ├── components/
 │   │   ├── DotGrid/         # Mouse-interactive background grid component
-│   │   └── Lanyard/         # Three.js 3D physics-based lanyard card component
-│   ├── App.tsx              # Main entry layout
+│   │   ├── Lanyard/         # Three.js 3D physics-based lanyard card component
+│   │   └── AdminPanel.tsx   # Admin dashboard for updating database content
+│   ├── lib/
+│   │   ├── supabaseClient.ts # Supabase initialization client with fallback safeguards
+│   │   └── constants.ts      # Shared default constants and types
+│   ├── App.tsx              # Main entry layout and fetch operations
 │   ├── main.tsx             # React render root
-│   ├── styles.css           # Global Tailwind and custom CSS overrides
-│   └── vite-env.d.ts
+│   ├── styles.css           # Global CSS overrides and styles
 ├── index.html
+├── rollup.config.mjs        # Production rollup bundler configuration
 ├── package.json
-├── tailwind.config.js
 └── tsconfig.json
 ```
 
