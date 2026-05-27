@@ -1,10 +1,31 @@
+import { useState, useEffect } from 'react';
 import Lanyard from './components/Lanyard/Lanyard';
 import DotGrid from './components/DotGrid/DotGrid';
+import AdminPanel from './components/AdminPanel';
 import avatarImg from './assets/avatar.jpg';
 
-const highlights = ['LLM Apps', 'RAG Systems', 'AI Agents', 'Automation', 'NLP', 'Computer Vision'];
+interface Project {
+  title: string;
+  description: string;
+  tech: string[];
+  github: string;
+  live: string;
+  images?: string[];
+  video?: string;
+  pinned?: boolean;
+}
 
-const contact = {
+interface Contact {
+  email: string;
+  github: string;
+  linkedin: string;
+  twitter: string;
+  phone: string;
+}
+
+const DEFAULT_HIGHLIGHTS = ['LLM Apps', 'RAG Systems', 'AI Agents', 'Automation', 'NLP', 'Computer Vision'];
+
+const DEFAULT_CONTACT: Contact = {
   email: 'ravishpaulkr@gmail.com',
   github: 'https://github.com/Ravish-Paul',
   linkedin: 'https://www.linkedin.com/in/ravish-paul/',
@@ -12,7 +33,7 @@ const contact = {
   phone: '916200964060'
 };
 
-const projects = [
+const DEFAULT_PROJECTS: Project[] = [
   {
     title: 'AI PDF Chatbot',
     description: 'Chat with PDFs using Retrieval-Augmented Generation and GPT APIs.',
@@ -36,7 +57,7 @@ const projects = [
   }
 ];
 
-const skills = [
+const DEFAULT_SKILLS = [
   'Python',
   'Machine Learning',
   'Deep Learning',
@@ -49,7 +70,251 @@ const skills = [
   'Automation'
 ];
 
+const getGithubUsername = (url: string) => {
+  try {
+    const clean = url.trim().replace(/\/$/, "");
+    const parts = clean.split('/');
+    return parts[parts.length - 1] || 'Ravish-Paul';
+  } catch (e) {
+    return 'Ravish-Paul';
+  }
+};
+
+const formatPhone = (phone: string) => {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  }
+  return digits ? `+${digits}` : '';
+};
+
+const getEmbedUrl = (url: string | undefined) => {
+  if (!url) return '';
+  try {
+    const clean = url.trim();
+    // YouTube
+    if (clean.includes('youtube.com/watch')) {
+      const u = new URL(clean);
+      const v = u.searchParams.get('v');
+      return v ? `https://www.youtube.com/embed/${v}` : clean;
+    }
+    if (clean.includes('youtu.be/')) {
+      const parts = clean.split('youtu.be/');
+      const idPart = parts[parts.length - 1].split('?')[0];
+      return `https://www.youtube.com/embed/${idPart}`;
+    }
+    if (clean.includes('youtube.com/embed/')) {
+      return clean;
+    }
+    // Loom
+    if (clean.includes('loom.com/share/')) {
+      const parts = clean.split('loom.com/share/');
+      const idPart = parts[parts.length - 1].split('?')[0];
+      return `https://www.loom.com/embed/${idPart}`;
+    }
+    if (clean.includes('loom.com/embed/')) {
+      return clean;
+    }
+    // Vimeo
+    if (clean.includes('vimeo.com/')) {
+      const parts = clean.split('vimeo.com/');
+      const idPart = parts[parts.length - 1].split('?')[0];
+      return `https://player.vimeo.com/video/${idPart}`;
+    }
+    return clean;
+  } catch (e) {
+    return url || '';
+  }
+};
+
+interface ProjectCardProps {
+  project: Project;
+  getEmbedUrl: (url: string | undefined) => string;
+}
+
+function ProjectCard({ project, getEmbedUrl }: ProjectCardProps) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Build the array of media slides
+  const slides: { type: 'video' | 'image'; url: string }[] = [];
+  if (project.video) {
+    slides.push({ type: 'video', url: project.video });
+  }
+  
+  if (project.images && project.images.length > 0) {
+    project.images.forEach((img) => {
+      slides.push({ type: 'image', url: img });
+    });
+  } else if ((project as any).image) {
+    // Backwards compatibility for single-string image field
+    slides.push({ type: 'image', url: (project as any).image });
+  }
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const hasMultiple = slides.length > 1;
+  const activeSlide = slides[currentSlide];
+
+  const isDirectVideo = activeSlide?.type === 'video' && (
+    activeSlide.url.endsWith('.mp4') || 
+    activeSlide.url.endsWith('.webm') || 
+    activeSlide.url.endsWith('.ogg') ||
+    activeSlide.url.includes('raw=true') ||
+    activeSlide.url.includes('raw=1')
+  );
+
+  const isYoutube = activeSlide?.type === 'video' && (activeSlide.url.includes('youtube.com') || activeSlide.url.includes('youtu.be'));
+  const isLoom = activeSlide?.type === 'video' && activeSlide.url.includes('loom.com');
+  const isVimeo = activeSlide?.type === 'video' && activeSlide.url.includes('vimeo.com');
+  const isEmbeddable = isYoutube || isLoom || isVimeo;
+  const embedUrl = isEmbeddable ? getEmbedUrl(activeSlide.url) : '';
+
+  return (
+    <article className="border border-neutral-200 bg-white/85 shadow-sm backdrop-blur-sm flex flex-col justify-between h-full overflow-hidden">
+      <div>
+        {slides.length > 0 && (
+          <div className="relative w-full aspect-video bg-neutral-900 border-b border-neutral-100 overflow-hidden group">
+            <div className="w-full h-full">
+              {activeSlide.type === 'video' ? (
+                isDirectVideo ? (
+                  <video
+                    src={activeSlide.url}
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                ) : isEmbeddable ? (
+                  <iframe
+                    src={embedUrl}
+                    title={`${project.title} video demo`}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="w-full h-full"
+                  ></iframe>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-neutral-400 font-mono">
+                    Unplayable video link
+                  </div>
+                )
+              ) : (
+                <img
+                  src={activeSlide.url}
+                  alt={`${project.title} slide`}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              )}
+            </div>
+
+            {hasMultiple && (
+              <>
+                <button
+                  onClick={handlePrev}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/95 text-neutral-900 border border-neutral-200 flex items-center justify-center shadow-md transition-all hover:bg-neutral-950 hover:text-white hover:border-neutral-950 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  aria-label="Previous slide"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/95 text-neutral-900 border border-neutral-200 flex items-center justify-center shadow-md transition-all hover:bg-neutral-950 hover:text-white hover:border-neutral-950 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  aria-label="Next slide"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <div className="absolute bottom-3 right-3 bg-neutral-950/80 px-2 py-1 text-[10px] font-semibold text-white tracking-widest font-mono select-none rounded backdrop-blur-[2px]">
+                  {currentSlide + 1}/{slides.length}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <div className="p-5">
+          <h2 className="text-base font-semibold text-neutral-950 flex items-center gap-2">
+            {project.title}
+            {project.pinned && (
+              <span className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-0.5 font-normal rounded font-mono select-none">
+                Pinned
+              </span>
+            )}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-neutral-600">{project.description}</p>
+          <div className="mt-4 flex flex-wrap gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+            {project.tech.join(' • ')}
+          </div>
+        </div>
+      </div>
+      <div className="p-5 pt-0 mt-2 flex gap-3">
+        <a
+          href={project.live}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 text-center border border-neutral-950 bg-neutral-950 py-2.5 text-xs font-semibold text-white transition-all duration-200 hover:bg-neutral-800 shadow-sm"
+        >
+          Live Demo
+        </a>
+        <a
+          href={project.github}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 text-center border border-neutral-200 bg-white py-2.5 text-xs font-semibold text-neutral-800 transition-all duration-200 hover:border-neutral-400 hover:bg-neutral-50 shadow-sm"
+        >
+          GitHub
+        </a>
+      </div>
+    </article>
+  );
+}
+
 function App() {
+  const [highlights, setHighlights] = useState<string[]>(() => {
+    const saved = localStorage.getItem('portfolio_highlights');
+    return saved ? JSON.parse(saved) : DEFAULT_HIGHLIGHTS;
+  });
+
+  const [contact, setContact] = useState<Contact>(() => {
+    const saved = localStorage.getItem('portfolio_contact');
+    return saved ? JSON.parse(saved) : DEFAULT_CONTACT;
+  });
+
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const saved = localStorage.getItem('portfolio_projects');
+    return saved ? JSON.parse(saved) : DEFAULT_PROJECTS;
+  });
+
+  const [skills, setSkills] = useState<string[]>(() => {
+    const saved = localStorage.getItem('portfolio_skills');
+    return saved ? JSON.parse(saved) : DEFAULT_SKILLS;
+  });
+
+  const [isAdmin, setIsAdmin] = useState(window.location.hash === '#admin');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setIsAdmin(window.location.hash === '#admin');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const closeAdmin = () => {
+    window.location.hash = '';
+    setIsAdmin(false);
+  };
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
     document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth' });
@@ -124,8 +389,8 @@ function App() {
               role: 'AI & LLM Developer',
               initials: 'RP',
               email: contact.email,
-              github: 'Ravish-Paul',
-              phone: '+91 62009 64060',
+              github: getGithubUsername(contact.github),
+              phone: formatPhone(contact.phone),
               avatar: avatarImg
             }}
           />
@@ -137,34 +402,12 @@ function App() {
         <div id="projects" className="space-y-4 pt-0">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 font-mono">Projects</p>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map(project => (
-              <article key={project.title} className="border border-neutral-200 bg-white/85 p-5 shadow-sm backdrop-blur-sm flex flex-col justify-between h-full">
-                <div>
-                  <h2 className="text-base font-semibold text-neutral-950">{project.title}</h2>
-                  <p className="mt-3 text-sm leading-6 text-neutral-600">{project.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-                    {project.tech.join(' • ')}
-                  </div>
-                </div>
-                <div className="mt-6 flex gap-3">
-                  <a
-                    href={project.live}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center border border-neutral-950 bg-neutral-950 py-2.5 text-xs font-semibold text-white transition-all duration-200 hover:bg-neutral-800 shadow-sm"
-                  >
-                    Live Demo
-                  </a>
-                  <a
-                    href={project.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center border border-neutral-200 bg-white py-2.5 text-xs font-semibold text-neutral-800 transition-all duration-200 hover:border-neutral-400 hover:bg-neutral-50 shadow-sm"
-                  >
-                    GitHub
-                  </a>
-                </div>
-              </article>
+            {[...projects].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)).map(project => (
+              <ProjectCard
+                key={project.title}
+                project={project}
+                getEmbedUrl={getEmbedUrl}
+              />
             ))}
           </div>
         </div>
@@ -228,8 +471,33 @@ function App() {
               <span>PaulkrScratch</span>
             </a>
           </div>
+
+          {/* Footer Area with Admin Link */}
+          <div className="mt-16 pt-8 border-t border-neutral-100 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-neutral-400 font-mono">
+            <span>© {new Date().getFullYear()} Ravish Paul. All rights reserved.</span>
+            <a
+              href="#admin"
+              className="hover:text-neutral-900 transition-colors underline underline-offset-4"
+            >
+              Admin Dashboard
+            </a>
+          </div>
         </div>
       </section>
+
+      {isAdmin && (
+        <AdminPanel
+          projects={projects}
+          setProjects={setProjects}
+          skills={skills}
+          setSkills={setSkills}
+          highlights={highlights}
+          setHighlights={setHighlights}
+          contact={contact}
+          setContact={setContact}
+          onClose={closeAdmin}
+        />
+      )}
     </main>
   );
 }
