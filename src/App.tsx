@@ -71,7 +71,8 @@ const DEFAULT_SKILLS = [
   'Automation'
 ];
 
-const getGithubUsername = (url: string) => {
+const getGithubUsername = (url: string | undefined | null) => {
+  if (!url) return 'Ravish-Paul';
   try {
     const clean = url.trim().replace(/\/$/, "");
     const parts = clean.split('/');
@@ -81,12 +82,17 @@ const getGithubUsername = (url: string) => {
   }
 };
 
-const formatPhone = (phone: string) => {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length === 12 && digits.startsWith('91')) {
-    return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+const formatPhone = (phone: string | undefined | null) => {
+  if (!phone) return '';
+  try {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 12 && digits.startsWith('91')) {
+      return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+    }
+    return digits ? `+${digits}` : '';
+  } catch (e) {
+    return '';
   }
-  return digits ? `+${digits}` : '';
 };
 
 const getEmbedUrl = (url: string | undefined) => {
@@ -142,9 +148,9 @@ function ProjectCard({ project, getEmbedUrl }: ProjectCardProps) {
     slides.push({ type: 'video', url: project.video });
   }
   
-  if (project.images && project.images.length > 0) {
+  if (project.images && Array.isArray(project.images) && project.images.length > 0) {
     project.images.forEach((img) => {
-      slides.push({ type: 'image', url: img });
+      if (img) slides.push({ type: 'image', url: img });
     });
   } else if ((project as any).image) {
     // Backwards compatibility for single-string image field
@@ -255,7 +261,7 @@ function ProjectCard({ project, getEmbedUrl }: ProjectCardProps) {
           </h2>
           <p className="mt-3 text-sm leading-6 text-neutral-600">{project.description}</p>
           <div className="mt-4 flex flex-wrap gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-            {project.tech.join(' • ')}
+            {project.tech && Array.isArray(project.tech) ? project.tech.join(' • ') : ''}
           </div>
         </div>
       </div>
