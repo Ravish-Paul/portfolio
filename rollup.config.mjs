@@ -39,7 +39,7 @@ function html() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI/LLM Portfolio</title>
     <link rel="stylesheet" href="/assets/index.css" />
-    <script>window.process = { env: { NODE_ENV: 'production' } };</script>
+    <script>window.process = { env: { NODE_ENV: 'production', VITE_SUPABASE_URL: ${JSON.stringify(process.env.VITE_SUPABASE_URL || '')}, VITE_SUPABASE_ANON_KEY: ${JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || '')} } };</script>
   </head>
   <body>
     <div id="root"></div>
