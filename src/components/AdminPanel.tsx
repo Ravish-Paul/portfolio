@@ -1,25 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-
-interface Project {
-  id?: string; // database UUID
-  title: string;
-  description: string;
-  tech: string[];
-  github: string;
-  live: string;
-  images?: string[];
-  video?: string;
-  pinned?: boolean;
-}
-
-interface Contact {
-  email: string;
-  github: string;
-  linkedin: string;
-  twitter: string;
-  phone: string;
-}
+import { 
+  Project, 
+  Contact, 
+  DEFAULT_PROJECTS, 
+  DEFAULT_SKILLS, 
+  DEFAULT_HIGHLIGHTS, 
+  DEFAULT_CONTACT 
+} from '../lib/constants';
 
 interface AdminPanelProps {
   projects: Project[];
@@ -92,6 +80,91 @@ export default function AdminPanel({
   useEffect(() => {
     setContactForm({ ...contact });
   }, [contact]);
+
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetDatabase = async () => {
+    if (!isSupabaseConfigured) return;
+    const confirm = window.confirm(
+      "Are you sure you want to reset your Supabase database? This will delete all current projects, skills, and highlights, and restore the defaults."
+    );
+    if (!confirm) return;
+
+    try {
+      setIsResetting(true);
+
+      // 1. Delete all current records
+      await supabase!.from('projects').delete().not('id', 'is', null);
+      await supabase!.from('skills').delete().not('id', 'is', null);
+      await supabase!.from('highlights').delete().not('id', 'is', null);
+
+      // 2. Insert defaults
+      const projectsToInsert = DEFAULT_PROJECTS.map((p, idx) => ({
+        title: p.title,
+        description: p.description,
+        tech: p.tech,
+        github: p.github,
+        live: p.live,
+        images: p.images || [],
+        video: p.video || '',
+        pinned: p.pinned || false,
+        created_at: new Date(Date.now() - (5 - idx) * 60000).toISOString()
+      }));
+      
+      const { data: projData, error: projErr } = await supabase!.from('projects').insert(projectsToInsert).select();
+      if (projErr) throw projErr;
+
+      const skillsToInsert = DEFAULT_SKILLS.map(name => ({ name }));
+      const { error: skillErr } = await supabase!.from('skills').insert(skillsToInsert);
+      if (skillErr) throw skillErr;
+
+      const highlightsToInsert = DEFAULT_HIGHLIGHTS.map(name => ({ name }));
+      const { error: highErr } = await supabase!.from('highlights').insert(highlightsToInsert);
+      if (highErr) throw highErr;
+
+      const { error: contactErr } = await supabase!.from('contact').upsert({
+        id: 1,
+        email: DEFAULT_CONTACT.email,
+        github: DEFAULT_CONTACT.github,
+        linkedin: DEFAULT_CONTACT.linkedin,
+        twitter: DEFAULT_CONTACT.twitter,
+        phone: DEFAULT_CONTACT.phone,
+        updated_at: new Date().toISOString()
+      });
+      if (contactErr) throw contactErr;
+
+      // 3. Update local state
+      const newProjects = (projData || []).map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        tech: p.tech || [],
+        github: p.github,
+        live: p.live,
+        images: p.images || [],
+        video: p.video,
+        pinned: p.pinned
+      }));
+
+      setProjects(newProjects);
+      setSkills(DEFAULT_SKILLS);
+      setHighlights(DEFAULT_HIGHLIGHTS);
+      setContact(DEFAULT_CONTACT);
+
+      saveToLocalStorage('portfolio_projects', newProjects);
+      saveToLocalStorage('portfolio_skills', DEFAULT_SKILLS);
+      saveToLocalStorage('portfolio_highlights', DEFAULT_HIGHLIGHTS);
+      saveToLocalStorage('portfolio_contact', DEFAULT_CONTACT);
+
+      alert("Supabase database successfully reset to default portfolio data!");
+    } catch (error: any) {
+      console.error("Error resetting database:", error);
+      alert("Error resetting database: " + error.message);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
 
   interface ProjectFormState {
     title: string;
@@ -957,6 +1030,24 @@ export default function AdminPanel({
                   {copiedCode ? 'Copied!' : 'Copy Code'}
                 </button>
               </div>
+
+              {isSupabaseConfigured && (
+                <div className="rounded border border-yellow-100 bg-yellow-50/50 p-4 space-y-3">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-yellow-800">Database Tools</h4>
+                    <p className="text-xs text-yellow-900 mt-1">
+                      Reset your Supabase database tables to the default portfolio values (all existing projects, skills, and highlights in Supabase will be replaced with original portfolio defaults).
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleResetDatabase}
+                    disabled={isResetting}
+                    className="border border-yellow-700 bg-yellow-600 hover:bg-yellow-700 disabled:bg-neutral-300 text-white px-4 py-2 text-xs font-semibold transition-all rounded shadow-sm"
+                  >
+                    {isResetting ? 'Resetting...' : 'Reset Database to Default Data'}
+                  </button>
+                </div>
+              )}
 
               <div className="rounded border border-blue-100 bg-blue-50/50 p-4 space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-blue-800">Deployment Instructions</h4>

@@ -5,71 +5,14 @@ import AdminPanel from './components/AdminPanel';
 import avatarImg from './assets/avatar.jpg';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 
-interface Project {
-  title: string;
-  description: string;
-  tech: string[];
-  github: string;
-  live: string;
-  images?: string[];
-  video?: string;
-  pinned?: boolean;
-}
-
-interface Contact {
-  email: string;
-  github: string;
-  linkedin: string;
-  twitter: string;
-  phone: string;
-}
-
-const DEFAULT_HIGHLIGHTS = ['LLM Apps', 'RAG Systems', 'AI Agents', 'Automation', 'NLP', 'Computer Vision'];
-
-const DEFAULT_CONTACT: Contact = {
-  email: 'ravishpaulkr@gmail.com',
-  github: 'https://github.com/Ravish-Paul',
-  linkedin: 'https://www.linkedin.com/in/ravish-paul/',
-  twitter: 'https://x.com/PaulkrScratch',
-  phone: '916200964060'
-};
-
-const DEFAULT_PROJECTS: Project[] = [
-  {
-    title: 'AI PDF Chatbot',
-    description: 'Chat with PDFs using Retrieval-Augmented Generation and GPT APIs.',
-    tech: ['Python', 'LangChain', 'FAISS', 'OpenAI API'],
-    github: 'https://github.com/Ravish-sketch/RAG-pdf-chatbot',
-    live: 'https://rag-pdf-chatbot-gemini.streamlit.app'
-  },
-  {
-    title: 'AI Resume Analyzer',
-    description: 'AI-powered resume screening and job matching system.',
-    tech: ['Python', 'NLP', 'Streamlit', 'OpenAI API'],
-    github: 'https://github.com/Ravish-sketch/ai_resume_matcher',
-    live: 'https://ai-resume-matcher-gemini.streamlit.app'
-  },
-  {
-    title: 'AI Image Verification System',
-    description: 'Vision-based AI system to verify image-text consistency.',
-    tech: ['Python', 'Vision API', 'LLMs', 'Streamlit'],
-    github: 'https://github.com/Ravish-sketch/image_text_verifier',
-    live: 'https://image-text-verifier.streamlit.app'
-  }
-];
-
-const DEFAULT_SKILLS = [
-  'Python',
-  'Machine Learning',
-  'Deep Learning',
-  'LangChain',
-  'OpenAI API',
-  'RAG',
-  'FAISS',
-  'NLP',
-  'Streamlit',
-  'Automation'
-];
+import { 
+  Project, 
+  Contact, 
+  DEFAULT_HIGHLIGHTS, 
+  DEFAULT_CONTACT, 
+  DEFAULT_PROJECTS, 
+  DEFAULT_SKILLS 
+} from './lib/constants';
 
 const getGithubUsername = (url: string | undefined | null) => {
   if (!url) return 'Ravish-Paul';
@@ -389,6 +332,59 @@ function App() {
           };
           setContact(mappedContact);
           localStorage.setItem('portfolio_contact', JSON.stringify(mappedContact));
+        }
+
+        // Automatic DB Seeding if database is completely empty
+        const projectsEmpty = !projError && (!projectsData || projectsData.length === 0);
+        const skillsEmpty = !skillsError && (!skillsData || skillsData.length === 0);
+        const highlightsEmpty = !highlightsError && (!highlightsData || highlightsData.length === 0);
+
+        if (projectsEmpty && skillsEmpty && highlightsEmpty) {
+          console.log('Supabase tables are empty. Auto-seeding defaults...');
+          
+          // Seed projects
+          const projectsToInsert = DEFAULT_PROJECTS.map((p, idx) => ({
+            title: p.title,
+            description: p.description,
+            tech: p.tech,
+            github: p.github,
+            live: p.live,
+            images: p.images || [],
+            video: p.video || '',
+            pinned: p.pinned || false,
+            created_at: new Date(Date.now() - (5 - idx) * 60000).toISOString()
+          }));
+          await supabase!.from('projects').insert(projectsToInsert);
+
+          // Seed skills
+          const skillsToInsert = DEFAULT_SKILLS.map(name => ({ name }));
+          await supabase!.from('skills').insert(skillsToInsert);
+
+          // Seed highlights
+          const highlightsToInsert = DEFAULT_HIGHLIGHTS.map(name => ({ name }));
+          await supabase!.from('highlights').insert(highlightsToInsert);
+
+          // Seed contact
+          await supabase!.from('contact').upsert({
+            id: 1,
+            email: DEFAULT_CONTACT.email,
+            github: DEFAULT_CONTACT.github,
+            linkedin: DEFAULT_CONTACT.linkedin,
+            twitter: DEFAULT_CONTACT.twitter,
+            phone: DEFAULT_CONTACT.phone,
+            updated_at: new Date().toISOString()
+          });
+
+          // Set state and storage directly
+          setProjects(DEFAULT_PROJECTS);
+          setSkills(DEFAULT_SKILLS);
+          setHighlights(DEFAULT_HIGHLIGHTS);
+          setContact(DEFAULT_CONTACT);
+
+          localStorage.setItem('portfolio_projects', JSON.stringify(DEFAULT_PROJECTS));
+          localStorage.setItem('portfolio_skills', JSON.stringify(DEFAULT_SKILLS));
+          localStorage.setItem('portfolio_highlights', JSON.stringify(DEFAULT_HIGHLIGHTS));
+          localStorage.setItem('portfolio_contact', JSON.stringify(DEFAULT_CONTACT));
         }
       } catch (e) {
         console.error('Error fetching Supabase data:', e);
