@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 
 interface Project {
+  id?: string; // database UUID
   title: string;
   description: string;
   tech: string[];
@@ -83,6 +85,14 @@ export default function AdminPanel({
     localStorage.setItem(key, JSON.stringify(data));
   };
 
+  // Local Contact Form state
+  const [contactForm, setContactForm] = useState<Contact>({ ...contact });
+  const [contactSuccessMsg, setContactSuccessMsg] = useState('');
+
+  useEffect(() => {
+    setContactForm({ ...contact });
+  }, [contact]);
+
   interface ProjectFormState {
     title: string;
     description: string;
@@ -142,7 +152,7 @@ export default function AdminPanel({
     setIsFormOpen(true);
   };
 
-  const handleProjectSubmit = (e: React.FormEvent) => {
+  const handleProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const techArray = techInput
       .split(',')
@@ -164,8 +174,59 @@ export default function AdminPanel({
       video: projectForm.video?.trim() || undefined,
       pinned: projectForm.pinned,
     };
-    let newProjects = [...projects];
+    
+    if (isSupabaseConfigured) {
+      if (editingIndex !== null) {
+        // Update in Supabase
+        const originalProject = projects[editingIndex];
+        const { error } = await supabase!
+          .from('projects')
+          .update({
+            title: updatedProject.title,
+            description: updatedProject.description,
+            tech: updatedProject.tech,
+            github: updatedProject.github,
+            live: updatedProject.live,
+            images: updatedProject.images || [],
+            video: updatedProject.video || '',
+            pinned: updatedProject.pinned || false,
+          })
+          .eq('title', originalProject.title);
+        
+        if (error) {
+          alert('Error updating project in Supabase: ' + error.message);
+          return;
+        }
+        // Retain original database ID if present
+        updatedProject.id = originalProject.id;
+      } else {
+        // Insert into Supabase
+        const { data, error } = await supabase!
+          .from('projects')
+          .insert({
+            title: updatedProject.title,
+            description: updatedProject.description,
+            tech: updatedProject.tech,
+            github: updatedProject.github,
+            live: updatedProject.live,
+            images: updatedProject.images || [],
+            video: updatedProject.video || '',
+            pinned: updatedProject.pinned || false,
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          alert('Error creating project in Supabase: ' + error.message);
+          return;
+        }
+        if (data) {
+          updatedProject.id = data.id;
+        }
+      }
+    }
 
+    let newProjects = [...projects];
     if (editingIndex !== null) {
       newProjects[editingIndex] = updatedProject;
     } else {
@@ -178,8 +239,21 @@ export default function AdminPanel({
     setEditingIndex(null);
   };
 
-  const handleDeleteProject = (index: number) => {
+  const handleDeleteProject = async (index: number) => {
     if (confirm('Are you sure you want to delete this project?')) {
+      const projectToDelete = projects[index];
+      if (isSupabaseConfigured) {
+        const { error } = await supabase!
+          .from('projects')
+          .delete()
+          .eq('title', projectToDelete.title);
+        
+        if (error) {
+          alert('Error deleting project from Supabase: ' + error.message);
+          return;
+        }
+      }
+
       const newProjects = projects.filter((_, i) => i !== index);
       setProjects(newProjects);
       saveToLocalStorage('portfolio_projects', newProjects);
@@ -188,17 +262,39 @@ export default function AdminPanel({
 
   // Skill Management
   const [newSkill, setNewSkill] = useState('');
-  const handleAddSkill = (e: React.FormEvent) => {
+  const handleAddSkill = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-      const updated = [...skills, newSkill.trim()];
+    const cleanName = newSkill.trim();
+    if (cleanName && !skills.includes(cleanName)) {
+      if (isSupabaseConfigured) {
+        const { error } = await supabase!
+          .from('skills')
+          .insert({ name: cleanName });
+        if (error) {
+          alert('Error adding skill to Supabase: ' + error.message);
+          return;
+        }
+      }
+
+      const updated = [...skills, cleanName];
       setSkills(updated);
       saveToLocalStorage('portfolio_skills', updated);
       setNewSkill('');
     }
   };
 
-  const handleRemoveSkill = (skillToRemove: string) => {
+  const handleRemoveSkill = async (skillToRemove: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase!
+        .from('skills')
+        .delete()
+        .eq('name', skillToRemove);
+      if (error) {
+        alert('Error removing skill from Supabase: ' + error.message);
+        return;
+      }
+    }
+
     const updated = skills.filter((s) => s !== skillToRemove);
     setSkills(updated);
     saveToLocalStorage('portfolio_skills', updated);
@@ -206,27 +302,68 @@ export default function AdminPanel({
 
   // Highlights Management
   const [newHighlight, setNewHighlight] = useState('');
-  const handleAddHighlight = (e: React.FormEvent) => {
+  const handleAddHighlight = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newHighlight.trim() && !highlights.includes(newHighlight.trim())) {
-      const updated = [...highlights, newHighlight.trim()];
+    const cleanName = newHighlight.trim();
+    if (cleanName && !highlights.includes(cleanName)) {
+      if (isSupabaseConfigured) {
+        const { error } = await supabase!
+          .from('highlights')
+          .insert({ name: cleanName });
+        if (error) {
+          alert('Error adding highlight to Supabase: ' + error.message);
+          return;
+        }
+      }
+
+      const updated = [...highlights, cleanName];
       setHighlights(updated);
       saveToLocalStorage('portfolio_highlights', updated);
       setNewHighlight('');
     }
   };
 
-  const handleRemoveHighlight = (highlightToRemove: string) => {
+  const handleRemoveHighlight = async (highlightToRemove: string) => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase!
+        .from('highlights')
+        .delete()
+        .eq('name', highlightToRemove);
+      if (error) {
+        alert('Error removing highlight from Supabase: ' + error.message);
+        return;
+      }
+    }
+
     const updated = highlights.filter((h) => h !== highlightToRemove);
     setHighlights(updated);
     saveToLocalStorage('portfolio_highlights', updated);
   };
 
-  // Contact management
-  const handleContactChange = (field: keyof Contact, value: string) => {
-    const updated = { ...contact, [field]: value };
-    setContact(updated);
-    saveToLocalStorage('portfolio_contact', updated);
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSupabaseConfigured) {
+      const { error } = await supabase!
+        .from('contact')
+        .upsert({
+          id: 1,
+          email: contactForm.email,
+          github: contactForm.github,
+          linkedin: contactForm.linkedin,
+          twitter: contactForm.twitter,
+          phone: contactForm.phone,
+          updated_at: new Date().toISOString(),
+        });
+      
+      if (error) {
+        alert('Error saving contact details to Supabase: ' + error.message);
+        return;
+      }
+    }
+    setContact({ ...contactForm });
+    saveToLocalStorage('portfolio_contact', contactForm);
+    setContactSuccessMsg('Contact details updated successfully!');
+    setTimeout(() => setContactSuccessMsg(''), 3000);
   };
 
   // Reset all to defaults
@@ -715,7 +852,7 @@ export default function AdminPanel({
 
           {/* CONTACT INFO TAB */}
           {activeTab === 'contact' && (
-            <div className="border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
+            <form onSubmit={handleContactSubmit} className="border border-neutral-200 bg-white p-6 shadow-sm space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-neutral-950">Contact Information</h2>
                 <p className="text-xs text-neutral-500 mt-1">
@@ -728,8 +865,9 @@ export default function AdminPanel({
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">Email Address</label>
                   <input
                     type="email"
-                    value={contact.email}
-                    onChange={(e) => handleContactChange('email', e.target.value)}
+                    required
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                     className="w-full border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
                     placeholder="email@example.com"
                   />
@@ -739,8 +877,9 @@ export default function AdminPanel({
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">Phone (digits only)</label>
                   <input
                     type="text"
-                    value={contact.phone}
-                    onChange={(e) => handleContactChange('phone', e.target.value)}
+                    required
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
                     className="w-full border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400 font-mono"
                     placeholder="916200964060"
                   />
@@ -750,8 +889,9 @@ export default function AdminPanel({
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">GitHub Profile Link</label>
                   <input
                     type="url"
-                    value={contact.github}
-                    onChange={(e) => handleContactChange('github', e.target.value)}
+                    required
+                    value={contactForm.github}
+                    onChange={(e) => setContactForm({ ...contactForm, github: e.target.value })}
                     className="w-full border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
                     placeholder="https://github.com/username"
                   />
@@ -761,8 +901,9 @@ export default function AdminPanel({
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">LinkedIn Link</label>
                   <input
                     type="url"
-                    value={contact.linkedin}
-                    onChange={(e) => handleContactChange('linkedin', e.target.value)}
+                    required
+                    value={contactForm.linkedin}
+                    onChange={(e) => setContactForm({ ...contactForm, linkedin: e.target.value })}
                     className="w-full border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
                     placeholder="https://linkedin.com/in/..."
                   />
@@ -772,14 +913,27 @@ export default function AdminPanel({
                   <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500">Twitter / X Link</label>
                   <input
                     type="url"
-                    value={contact.twitter}
-                    onChange={(e) => handleContactChange('twitter', e.target.value)}
+                    required
+                    value={contactForm.twitter}
+                    onChange={(e) => setContactForm({ ...contactForm, twitter: e.target.value })}
                     className="w-full border border-neutral-200 px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400"
                     placeholder="https://x.com/username"
                   />
                 </div>
               </div>
-            </div>
+
+              <div className="flex justify-end items-center gap-4 pt-4 border-t border-neutral-100">
+                {contactSuccessMsg && (
+                  <span className="text-xs text-emerald-600 font-semibold">{contactSuccessMsg}</span>
+                )}
+                <button
+                  type="submit"
+                  className="border border-neutral-950 bg-neutral-950 px-5 py-2.5 text-xs font-semibold text-white hover:bg-neutral-800"
+                >
+                  Save Contact Details
+                </button>
+              </div>
+            </form>
           )}
 
           {/* EXPORT CODE TAB */}

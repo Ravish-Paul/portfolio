@@ -3,6 +3,7 @@ import Lanyard from './components/Lanyard/Lanyard';
 import DotGrid from './components/DotGrid/DotGrid';
 import AdminPanel from './components/AdminPanel';
 import avatarImg from './assets/avatar.jpg';
+import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 
 interface Project {
   title: string;
@@ -302,6 +303,7 @@ function App() {
   });
 
   const [isAdmin, setIsAdmin] = useState(window.location.hash === '#admin');
+  const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -311,14 +313,107 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch projects
+        const { data: projectsData, error: projError } = await supabase!
+          .from('projects')
+          .select('*')
+          .order('pinned', { ascending: false })
+          .order('created_at', { ascending: true });
+        
+        if (!projError && projectsData) {
+          const mappedProjects = projectsData.map((p: any) => ({
+            title: p.title,
+            description: p.description,
+            tech: p.tech || [],
+            github: p.github,
+            live: p.live,
+            images: p.images || [],
+            video: p.video,
+            pinned: p.pinned,
+          }));
+          setProjects(mappedProjects);
+          localStorage.setItem('portfolio_projects', JSON.stringify(mappedProjects));
+        }
+
+        // Fetch skills
+        const { data: skillsData, error: skillsError } = await supabase!
+          .from('skills')
+          .select('name')
+          .order('created_at', { ascending: true });
+        
+        if (!skillsError && skillsData) {
+          const names = skillsData.map((s: any) => s.name);
+          setSkills(names);
+          localStorage.setItem('portfolio_skills', JSON.stringify(names));
+        }
+
+        // Fetch highlights
+        const { data: highlightsData, error: highlightsError } = await supabase!
+          .from('highlights')
+          .select('name')
+          .order('created_at', { ascending: true });
+        
+        if (!highlightsError && highlightsData) {
+          const names = highlightsData.map((h: any) => h.name);
+          setHighlights(names);
+          localStorage.setItem('portfolio_highlights', JSON.stringify(names));
+        }
+
+        // Fetch contact details (row with id = 1)
+        const { data: contactData, error: contactError } = await supabase!
+          .from('contact')
+          .select('*')
+          .eq('id', 1)
+          .single();
+        
+        if (!contactError && contactData) {
+          const mappedContact = {
+            email: contactData.email,
+            github: contactData.github,
+            linkedin: contactData.linkedin,
+            twitter: contactData.twitter,
+            phone: contactData.phone,
+          };
+          setContact(mappedContact);
+          localStorage.setItem('portfolio_contact', JSON.stringify(mappedContact));
+        }
+      } catch (e) {
+        console.error('Error fetching Supabase data:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const closeAdmin = () => {
     window.location.hash = '';
     setIsAdmin(false);
   };
+
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
     document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center font-mono text-xs text-neutral-500">
+        <div className="flex items-center gap-3">
+          <span className="h-2 w-2 rounded-full bg-neutral-950 animate-pulse"></span>
+          <span>Loading portfolio data...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-white text-neutral-900">
