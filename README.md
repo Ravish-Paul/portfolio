@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ravish Paul - AI & ML Engineer Portfolio
 
-## Getting Started
+Welcome to my personal portfolio repository! This website showcases my journey, expertise, and flagship projects as an AI Engineer and LLM Developer.
 
-First, run the development server:
+🌐 **Live Website:** [https://portfolio-ravish-paul.vercel.app/](https://portfolio-ravish-paul.vercel.app/)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 About the Project
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This portfolio is a reflection of my work in building production-ready AI systems. It highlights my skills across:
+- **Machine Learning & Deep Learning**
+- **Natural Language Processing (NLP)**
+- **Large Language Models (LLMs)**
+- **Retrieval-Augmented Generation (RAG)**
+- **Multi-Agent Systems**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The website itself is built using modern web technologies to ensure a fast, responsive, and sleek user experience.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Tech Stack (Portfolio Website)
 
-## Learn More
+- **Framework:** [Next.js](https://nextjs.org/) (App Router)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **Animations:** [Framer Motion](https://www.framer.com/motion/)
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Deployment:** [Vercel](https://vercel.com/)
 
-To learn more about Next.js, take a look at the following resources:
+## 📂 Key Sections
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Hero & About:** A brief introduction to who I am and my core focus areas.
+2. **Expertise:** Deep dives into the specific AI/ML domains I specialize in.
+3. **Projects:** Showcases of my flagship and production AI applications (like my Multi-Agent Research System and AI PDF Chatbot).
+4. **Skills:** A comprehensive list of frameworks, languages, and tools I use daily.
+5. **GitHub Activity:** A custom dashboard reflecting my open-source contributions, commits, and repository statistics.
+6. **Journey:** A timeline view of my growth and milestones in the AI space.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🏃‍♂️ Running Locally
 
-## Deploy on Vercel
+If you'd like to run this portfolio locally:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Ravish-Paul/portfolio.git
+   ```
+2. Navigate into the directory:
+   ```bash
+   cd portfolio
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to view the site.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+*Designed and built by Ravish Paul.*
